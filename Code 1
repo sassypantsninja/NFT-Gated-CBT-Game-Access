@@ -1,0 +1,50 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/utils/Counters.sol";
+
+contract GameAccessNFT is ERC721, Ownable {
+    using Counters for Counters.Counter;
+    Counters.Counter private _tokenIdCounter;
+
+    string public baseURI;
+    mapping(address => bool) public hasAccess;
+
+    event Minted(address indexed minter, uint256 tokenId);
+    event AccessGranted(address indexed user);
+
+    constructor(string memory _baseURI) ERC721("GameAccessNFT", "GANFT") {
+        baseURI = _baseURI;
+    }
+
+    function mintNFT() external {
+        uint256 tokenId = _tokenIdCounter.current();
+        _tokenIdCounter.increment();
+        _mint(msg.sender, tokenId);
+
+        hasAccess[msg.sender] = true; // Grant CBT access upon minting
+
+        emit Minted(msg.sender, tokenId);
+        emit AccessGranted(msg.sender);
+    }
+
+    function tokenURI(uint256 tokenId) public view override returns (string memory) {
+        require(_exists(tokenId), "Token does not exist");
+        return string(abi.encodePacked(baseURI, Strings.toString(tokenId), ".json"));
+    }
+
+    function setBaseURI(string memory _baseURI) external onlyOwner {
+        baseURI = _baseURI;
+    }
+
+    function checkAccess(address user) external view returns (bool) {
+        return hasAccess[user];
+    }
+
+    function revokeAccess(uint256 tokenId) external onlyOwner {
+        address owner = ownerOf(tokenId);
+        hasAccess[owner] = false;
+    }
+}
